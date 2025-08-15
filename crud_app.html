@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Minor Project: CRUD Application (LocalStorage)</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --panel:#111827;
+    --soft:#1f2937;
+    --text:#e5e7eb;
+    --muted:#9ca3af;
+    --accent:#22d3ee;
+    --danger:#ef4444;
+    --success:#22c55e;
+    --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background:linear-gradient(120deg, #0f172a 0%, #111827 100%);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  header{
+    padding:24px 20px;
+    background:transparent;
+    border-bottom:1px solid #ffffff12;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .brand{
+    display:flex;align-items:center;gap:12px
+  }
+  .logo{
+    width:40px;height:40px;border-radius:12px;background:radial-gradient(circle at 30% 30%, var(--accent), #0ea5e9 60%, #2563eb);
+    box-shadow:0 10px 30px #22d3ee44, inset 0 0 20px #22d3ee55;
+  }
+  h1{margin:0;font-size:1.3rem;letter-spacing:.2px}
+  .tag{font-size:.8rem;color:var(--muted)}
+  main{max-width:1100px;margin:24px auto;padding:0 16px;flex:1;width:100%}
+  .grid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media (min-width:900px){
+    .grid{grid-template-columns:380px 1fr}
+  }
+  .card{
+    background:linear-gradient(180deg, #0b1220, #0b1220) padding-box, linear-gradient(120deg, #22d3ee33, #60a5fa33) border-box;
+    border:1px solid transparent;
+    border-radius:18px;
+    box-shadow:0 10px 30px #00000044;
+    overflow:hidden;
+  }
+  .card header{padding:16px;border:0}
+  .card .content{padding:16px;padding-top:0}
+  label{display:block;margin:.5rem 0 .25rem;color:#cbd5e1;font-size:.9rem}
+  input, select, textarea{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid #ffffff1a;
+    background:#0b1220;
+    color:var(--text);
+    outline:none;
+    transition:border .2s, box-shadow .2s, transform .02s;
+  }
+  input:focus, select:focus, textarea:focus{
+    border-color:#22d3ee66;
+    box-shadow:0 0 0 4px #22d3ee11;
+  }
+  button{
+    border:0; padding:12px 14px; border-radius:12px; cursor:pointer; color:#031016;
+    background:linear-gradient(120deg, #22d3ee, #60a5fa);
+    font-weight:600;
+    transition:transform .04s ease, filter .2s ease;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  .btn-secondary{background:#0b1220;color:var(--text);border:1px solid #ffffff1a}
+  .btn-danger{background:linear-gradient(120deg, #ef4444, #f97316)}
+  .btn-warn{background:linear-gradient(120deg, #f59e0b, #f97316)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > *{flex:1}
+  table{width:100%;border-collapse:separate;border-spacing:0 10px}
+  thead th{font-size:.85rem;color:#a8b1c0;font-weight:600;text-align:left;padding:0 10px}
+  tbody tr{background:#0b1220;border-radius:12px}
+  tbody tr td{
+    padding:12px 10px;
+    border-top:1px solid #ffffff12;
+    border-bottom:1px solid #ffffff12;
+  }
+  tbody tr td:first-child{border-left:1px solid #ffffff12;border-top-left-radius:12px;border-bottom-left-radius:12px}
+  tbody tr td:last-child{border-right:1px solid #ffffff12;border-top-right-radius:12px;border-bottom-right-radius:12px}
+  .table-actions{display:flex;gap:8px;justify-content:flex-end}
+  .muted{color:var(--muted)}
+  .pill{
+    display:inline-block;padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid #ffffff1a;color:#d1d5db;font-size:.8rem
+  }
+  .toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap}
+  .search{flex:1}
+  .small{font-size:.85rem}
+  footer{padding:16px;color:#9ca3af;text-align:center}
+  .hint{font-size:.85rem;color:#a5b4fc}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>CRUD Application — Minor Project</h1>
+      <div class="tag">Create • Read • Update • Delete — persists in your browser using LocalStorage</div>
+    </div>
+  </div>
+  <div class="row" style="gap:8px">
+    <button id="exportBtn" title="Download as JSON">Export</button>
+    <button class="btn-secondary" id="importBtn" title="Import from JSON file">Import</button>
+    <input type="file" id="importFile" accept="application/json" hidden />
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <!-- Left: Form -->
+    <section class="card" aria-label="Record Form">
+      <header><h2 style="margin:0">Add / Edit Record</h2></header>
+      <div class="content">
+        <form id="recordForm">
+          <input type="hidden" id="record-id" />
+          <label for="name">Name</label>
+          <input id="name" placeholder="e.g., Jane Doe" required />
+          
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="e.g., jane@example.com" required />
+          
+          <label for="role">Role</label>
+          <select id="role" required>
+            <option value="">Select role…</option>
+            <option>Student</option>
+            <option>Developer</option>
+            <option>Designer</option>
+            <option>Manager</option>
+          </select>
+
+          <div class="row" style="margin-top:12px">
+            <button type="submit" id="submitBtn">Save Record</button>
+            <button type="button" class="btn-secondary" id="resetBtn">Reset</button>
+          </div>
+          <p class="hint">Tip: Click a row’s ✏️ to edit or 🗑️ to delete. Everything is saved automatically.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Right: Table -->
+    <section class="card" aria-label="Records Table">
+      <header>
+        <div class="toolbar">
+          <div class="row search">
+            <input id="search" placeholder="Search by name, email or role…" />
+          </div>
+          <div class="row" style="flex:0 0 auto">
+            <span class="pill small" id="countPill">0 records</span>
+            <select id="sort">
+              <option value="created_desc">Newest first</option>
+              <option value="created_asc">Oldest first</option>
+              <option value="name_asc">Name A → Z</option>
+              <option value="name_desc">Name Z → A</option>
+              <option value="role_asc">Role A → Z</option>
+              <option value="role_desc">Role Z → A</option>
+            </select>
+          </div>
+        </div>
+      </header>
+      <div class="content">
+        <table aria-describedby="A table of records">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Built for learning purposes. No backend required.
+</footer>
+
+<script>
+  // --- Storage Helpers ---
+  const STORAGE_KEY = "minor_project_crud_records_v1";
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const nowISO = () => new Date().toISOString();
+  const load = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  const save = (rows) => localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+
+  // --- State ---
+  let rows = load();
+  let editingId = null;
+  let q = "";
+  let sortBy = "created_desc";
+
+  // --- Elements ---
+  const form = document.getElementById("recordForm");
+  const nameEl = document.getElementById("name");
+  const emailEl = document.getElementById("email");
+  const roleEl = document.getElementById("role");
+  const idEl = document.getElementById("record-id");
+  const tbody = document.getElementById("tbody");
+  const searchEl = document.getElementById("search");
+  const sortEl = document.getElementById("sort");
+  const resetBtn = document.getElementById("resetBtn");
+  const countPill = document.getElementById("countPill");
+  const exportBtn = document.getElementById("exportBtn");
+  const importBtn = document.getElementById("importBtn");
+  const importFile = document.getElementById("importFile");
+
+  // --- CRUD ---
+  function create(data){
+    const row = { id: uid(), ...data, createdAt: nowISO() };
+    rows.unshift(row);
+    save(rows);
+    render();
+  }
+
+  function update(id, patch){
+    rows = rows.map(r => r.id === id ? { ...r, ...patch } : r);
+    save(rows);
+    render();
+  }
+
+  function remove(id){
+    rows = rows.filter(r => r.id !== id);
+    save(rows);
+    render();
+  }
+
+  // --- Render ---
+  function render(){
+    const filtered = rows.filter(r => {
+      const t = (r.name + " " + r.email + " " + r.role).toLowerCase();
+      return t.includes(q.toLowerCase());
+    });
+
+    const sorted = filtered.sort((a,b) => {
+      switch(sortBy){
+        case "created_asc": return a.createdAt.localeCompare(b.createdAt);
+        case "created_desc": return b.createdAt.localeCompare(a.createdAt);
+        case "name_asc": return a.name.localeCompare(b.name);
+        case "name_desc": return b.name.localeCompare(a.name);
+        case "role_asc": return a.role.localeCompare(b.role);
+        case "role_desc": return b.role.localeCompare(a.role);
+        default: return 0;
+      }
+    });
+
+    countPill.textContent = sorted.length + (sorted.length === 1 ? " record" : " records");
+
+    tbody.innerHTML = sorted.map((r, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(r.name)}</td>
+        <td>${escapeHtml(r.email)}</td>
+        <td>${escapeHtml(r.role)}</td>
+        <td class="muted">${new Date(r.createdAt).toLocaleString()}</td>
+        <td>
+          <div class="table-actions">
+            <button title="Edit" class="btn-warn" onclick="onEdit('${r.id}')">✏️</button>
+            <button title="Delete" class="btn-danger" onclick="onDelete('${r.id}')">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function escapeHtml(s){
+    return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  // --- Handlers ---
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const data = {
+      name: nameEl.value.trim(),
+      email: emailEl.value.trim(),
+      role: roleEl.value
+    };
+    if(!data.name || !data.email || !data.role){
+      alert("Please fill all fields.");
+      return;
+    }
+    if(editingId){
+      update(editingId, data);
+      editingId = null;
+      form.reset();
+      document.getElementById("submitBtn").textContent = "Save Record";
+    } else {
+      create(data);
+      form.reset();
+    }
+  });
+
+  resetBtn.addEventListener("click", () => {
+    editingId = null;
+    form.reset();
+    document.getElementById("submitBtn").textContent = "Save Record";
+  });
+
+  window.onEdit = (id) => {
+    const r = rows.find(x => x.id === id);
+    if(!r) return;
+    editingId = id;
+    idEl.value = id;
+    nameEl.value = r.name;
+    emailEl.value = r.email;
+    roleEl.value = r.role;
+    document.getElementById("submitBtn").textContent = "Update Record";
+    nameEl.focus();
+  };
+
+  window.onDelete = (id) => {
+    const r = rows.find(x => x.id === id);
+    if(!r) return;
+    if(confirm(`Delete "${r.name}"? This cannot be undone.`)){
+      remove(id);
+    }
+  };
+
+  searchEl.addEventListener("input", (e) => { q = e.target.value; render(); });
+  sortEl.addEventListener("change", (e) => { sortBy = e.target.value; render(); });
+
+  // Export / Import
+  exportBtn.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(rows, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "crud-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  importBtn.addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", async () => {
+    const file = importFile.files[0];
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if(!Array.isArray(parsed)) throw new Error("Invalid file format");
+      // Basic shape validation
+      const cleaned = parsed.map(p => ({
+        id: p.id || uid(),
+        name: (p.name || "").toString(),
+        email: (p.email || "").toString(),
+        role: (p.role || "").toString(),
+        createdAt: p.createdAt || nowISO()
+      }));
+      rows = cleaned;
+      save(rows);
+      render();
+      alert("Import successful!");
+    }catch(err){
+      alert("Import failed: " + err.message);
+    }finally{
+      importFile.value = "";
+    }
+  });
+
+  // Seed example data if empty
+  if(rows.length === 0){
+    rows = [
+      {id: uid(), name:"Alice Johnson", email:"alice@example.com", role:"Designer", createdAt: nowISO()},
+      {id: uid(), name:"Rahul Mehta", email:"rahul@example.com", role:"Developer", createdAt: nowISO()},
+      {id: uid(), name:"Fatima Noor", email:"fatima@example.com", role:"Manager", createdAt: nowISO()}
+    ];
+    save(rows);
+  }
+
+  render();
+</script>
+</body>
+</html>
